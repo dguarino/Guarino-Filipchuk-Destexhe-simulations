@@ -35,7 +35,7 @@ Enable the current user to launch docker images
 sudo usermod -a -G docker $USER
 ```
 
-Move to the folder `Guarino-Filipchuck-Destexhe-simulations` checked out from github and build the image
+Move to the folder `Guarino-Filipchuck-Destexhe-simulations` checked out from github and build the image (don't forget the dot at the end of next line!)
 
 ```
 docker build -t neuro .
