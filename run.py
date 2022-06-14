@@ -1,5 +1,5 @@
 """
-Copyright (c) 2016-2021, Domenico GUARINO
+Copyright (c) 2022, Domenico GUARINO
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -9,7 +9,7 @@ modification, are permitted provided that the following conditions are met:
     * Redistributions in binary form must reproduce the above copyright
       notice, this list of conditions and the following disclaimer in the
       documentation and/or other materials provided with the distribution.
-    * Neither the name of the <organization> nor the
+    * Neither the name of the Universite Paris Saclay nor the
       names of its contributors may be used to endorse or promote products
       derived from this software without specific prior written permission.
 
@@ -58,18 +58,13 @@ def getValue(dic, keys):
 # Examples
 
 # start the docker image:
-# $ docker run -v `pwd`:`pwd` -w `pwd` -i -t thalamus /bin/bash
+# $ docker run -v `pwd`:`pwd` -w `pwd` -i -t neuro /bin/bash
 
 # Run simple code
-# python run.py --folder test --params epsp_response.py nest
-
-# Search Example:
-# python run.py --folder EPSPsearch --params epsp_response.py --search search.py --map yes nest
-# python run.py --folder IPSPsearch --params ipsp_response.py --search search.py --map yes nest
-# python plot_map.py
+# python run.py --folder DrivenRandom2Ddensity --params DrivenRandom2Ddensity.py nest
 
 # Analysis Example
-# python run.py --folder EPSPsearch --params epsp_response.py --search search.py --analysis true nest
+# python run.py --folder DrivenRandom2Ddensity --params DrivenRandom2Ddensity.py --analysis dynamical_analysis.py nest
 
 sim, opts = get_simulator(
         ("--analysis", "Perform analysis only", {"dest":"analysis_file"}),

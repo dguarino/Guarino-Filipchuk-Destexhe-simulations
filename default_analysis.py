@@ -1,5 +1,5 @@
 """
-Copyright (c) 2016-2022, Domenico GUARINO
+Copyright (c) 2022, Domenico GUARINO
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
