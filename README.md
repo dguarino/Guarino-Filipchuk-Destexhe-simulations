@@ -62,7 +62,7 @@ docker run -v `pwd`:`pwd` -w `pwd` -i -t neuro /bin/bash
 You will now be inside the Docker container, with the git repository mapped into it.
 
 
-### how to: figure 3 ###
+### How to: figure 3 of the Guarino, Filipchuk, Destexhe paper ###
 
 
 Enter the repository folder and run the simulation for cortical 2D grid of excitatory and inhibitory Adaptive-Exponential Integrate-and-Fire point neurons, connected using a distance-dependent rule.   
