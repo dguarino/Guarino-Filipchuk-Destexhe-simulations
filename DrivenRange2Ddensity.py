@@ -94,7 +94,6 @@
             'post' : 'py',
             'space' :  sim.Space(periodic_boundaries=((0,100), (0,100), None)), # torus
             'connector' : sim.DistanceDependentProbabilityConnector("14*exp(-1.2*d)", allow_self_connections=False, rng=sim.NumpyRNG(2**32-1)), # radius 300um
-            # 'connector' : sim.DistanceDependentProbabilityConnector("14*exp(-numpy.abs(numpy.random.normal(1.2,0.5))*d)", allow_self_connections=False, rng=sim.NumpyRNG(2**32-1)),
             'weight' : .001, # uS
             'synapse_type' : sim.StaticSynapse(),
             'delay' : .5, # ms
@@ -107,7 +106,6 @@
             'post' : 'inh',
             'space' :  sim.Space(periodic_boundaries=((0,100), (0,100), None)), # torus
             'connector' : sim.DistanceDependentProbabilityConnector("24*exp(-1.5*d)", allow_self_connections=False, rng=sim.NumpyRNG(2**32-1)), # radius 100um
-            # 'connector' : sim.DistanceDependentProbabilityConnector("24*exp(-numpy.abs(numpy.random.normal(1.5,0.5))*d)", allow_self_connections=False, rng=sim.NumpyRNG(2**32-1)),
             'weight' : {'ref':'py_py'}, # µS
             'synapse_type' : sim.StaticSynapse(),
             'delay' : .5, # ms,
@@ -120,7 +118,6 @@
             'post' : 'inh',
             'space' :  sim.Space(periodic_boundaries=((0,100), (0,100), None)), # torus
             'connector' : sim.DistanceDependentProbabilityConnector("14*exp(-1.2*d)", allow_self_connections=False, rng=sim.NumpyRNG(2**32-1)), # radius 300um
-            # 'connector' : sim.DistanceDependentProbabilityConnector("14*exp(-numpy.abs(numpy.random.normal(1.2,0.5))*d)", allow_self_connections=False, rng=sim.NumpyRNG(2**32-1)),
             'weight' : .005, # uS
             'synapse_type' : sim.StaticSynapse(),
             'delay' : .5, # ms,
@@ -133,7 +130,6 @@
             'post' : 'py',
             'space' :  sim.Space(periodic_boundaries=((0,100), (0,100), None)), # torus
             'connector' : sim.DistanceDependentProbabilityConnector("24*exp(-1.5*d)", allow_self_connections=False, rng=sim.NumpyRNG(2**32-1)), # radius 200um
-            # 'connector' : sim.DistanceDependentProbabilityConnector("24*exp(-numpy.abs(numpy.random.normal(1.5,0.5))*d)", allow_self_connections=False, rng=sim.NumpyRNG(2**32-1)),
             'weight' : {'ref':'inh_inh'}, # µS
             'synapse_type' : sim.StaticSynapse(),
             'delay' : .5, # ms,
