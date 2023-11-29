@@ -1,5 +1,5 @@
 """
-Copyright (c) 2022, Domenico GUARINO
+Copyright (c) 2016-2021, Domenico GUARINO
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -9,7 +9,7 @@ modification, are permitted provided that the following conditions are met:
     * Redistributions in binary form must reproduce the above copyright
       notice, this list of conditions and the following disclaimer in the
       documentation and/or other materials provided with the distribution.
-    * Neither the name of the <organization> nor the
+    * Neither the name of the Universite Paris-Saclay nor the
       names of its contributors may be used to endorse or promote products
       derived from this software without specific prior written permission.
 
@@ -31,11 +31,15 @@ import numpy as np
 from pyNN.utility import Timer
 from pyNN.space import Space
 from pyNN.space import Grid2D
+from pyNN.parameters import Sequence
 
 from functools import partial # to run partial dt callback functions
 
 from scipy import ndimage as scimage
+import scipy.io
+
 import scipy.stats as stats
+from scipy import signal
 
 ################################
 import matplotlib
@@ -64,6 +68,14 @@ import matplotlib.pyplot as plt
 #     return t + 50. #params['push_interval']
 
 
+# https://github.com/btel/python-in-neuroscience-tutorials/blob/master/poisson_process.ipynb
+def inhomogeneous_poisson(rate, bin_size, start):
+    n_bins = len(rate)
+    spikes = np.random.rand(n_bins) < rate * bin_size
+    spike_times = np.nonzero(spikes)[0] * bin_size
+    return spike_times + start
+
+
 class SetRate(object):
     """
     A callback which changes the firing rate of a population of poisson
@@ -76,7 +88,10 @@ class SetRate(object):
         self.rate_generator = rate_generator
     def __call__(self, t):
         try:
-          self.population.set( rate = next(self.rate_generator) ) # list of rates for each unit in the population
+            lra = next(self.rate_generator)
+            # print(lra)
+            self.population.set( rate = lra ) # list of rates for each unit in the population
+            # self.population.set( rate = next(self.rate_generator) ) # list of rates for each unit in the population
         except StopIteration:
             pass
         return t + self.interval # next update
@@ -85,9 +100,14 @@ class SetRate(object):
 # Stimuli
 # All sensory modalities are considered to be in one way or another topologically organised and time varying.
 # Therefore, it is expected a time series of 2D arrays, with a sampling rate specification.
-# An image is provided containing all frames side by side (somatic and vision = as-is; audio = frequency mapping to 2D space; )
+# Then, during runtime, a callback function is used to alter the rates of a 2D SpikeSourcePoisson population.
+# Each frame image is expected to contain a rightly shaped array of 2Dvalues (in the range .0, 1.)
+# used to set the Poisson rates at the corresponding 2D position 2Dvalues * amp
+
+# Video
+# An image is provided containing all frames side by side
 # All frames are extracted at init time and stored in a 3D array
-def load_stimulus(filename, x, y, frames, zoom_x, zoom_y, maxr, fromRGBA=False):
+def load_visual_stimulus(filename, x, y, frames, zoom_x, zoom_y, maxr, fromRGBA=False):
     image = pltimg.imread(filename) # load image as pixel array
     # print(image.shape)
     if fromRGBA:
@@ -106,12 +126,29 @@ def load_stimulus(filename, x, y, frames, zoom_x, zoom_y, maxr, fromRGBA=False):
     # print(images.shape)
     return images
 
-# Then, during runtime, a callback function is used to alter the rates of a 2D SpikeSourcePoisson population.
-# Each frame image is expected to contain a rightly shaped array of 2Dvalues (in the range .0,1.)
-# used to set the Poisson rates at the corresponding 2D position 2Dvalues * amp
-# frames = np.random.rand(10, 64*64)
-# frames = (1. - 0.5) * np.random.random_sample((10, 64*64)) + 0.5
+# Audio
+def load_audio_stimulus(filename, start, factor):
+    mat = scipy.io.loadmat(filename)
+    bin_size = 0.1 # ms
+    channels = []
+    for rate in mat['Z']:
+        channels.append( inhomogeneous_poisson(factor*rate, bin_size, start) ) # ms
+        # channels.append( Sequence(inhomogeneous_poisson(rate, bin_size, start)) ) # ms
+    # print(channels)
+    print(filename, "channels:", len(channels), "lenght:", mat['X'].shape[1])
+    return channels
 
+# spiketrains from file
+def load_stimulus(filename, start):
+    channels = np.load(filename, allow_pickle=True)
+    # print(channels)
+    channels += start
+    # print(channels)
+    print(filename, "channels:", len(channels))
+    return channels
+
+
+# -----------------------------------------------------------------------------
 
 def build_network(sim, params):
     print("\nSetting up the Network ...")
@@ -136,19 +173,54 @@ def build_network(sim, params):
         # population creation
         populations[popKey].initialize()
 
-        if 'source' in popVal:
-            if not 'structure' in popVal:
-                print("ERROR: 2D stimuli can only be used with 2D populations. Population"+popKey+"has been decalred stimulus with source but no structure.")
-            stimulus_frames = load_stimulus(
-                filename=popVal['source']['file'],
-                x=popVal['source']['x'],
-                y=popVal['source']['y'],
-                frames=popVal['source']['f'],
-                zoom_x=math.sqrt(number),
-                zoom_y=math.sqrt(number),
-                maxr=popVal['source']['max_rate'],
-                fromRGBA=popVal['source']['fromRGBA']
-            )
+        # complex stimuli
+        if 'protocol' in popVal and 'modality' in popVal:
+
+            if popVal['modality']=='video':
+                if not 'structure' in popVal:
+                    print("ERROR: 2D stimuli can only be used with 2D populations. Population "+popKey+" has no structure.")
+
+                stimulus_frames = load_visual_stimulus(
+                    filename=popVal['source']['file'],
+                    x=popVal['source']['x'],
+                    y=popVal['source']['y'],
+                    frames=popVal['source']['f'],
+                    zoom_x=math.sqrt(number),
+                    zoom_y=math.sqrt(number),
+                    maxr=popVal['source']['rate'],
+                    fromRGBA=popVal['source']['fromRGBA']
+                )
+                # print(stats.describe(stimulus_frames)) # to check for stimulus stats
+                # print(stats.find_repeats(stimulus_frames)) # to check for "blank" (array([ 0.]), array([1237582], dtype=int32))
+
+            if popVal['modality'] in ['audio','fromfile']:
+                spiketimes = []
+                for stimulus_source in popVal['protocol']:
+                    if stimulus_source['source']=='blank':
+                        continue # no spike times
+                    else:
+                        if popVal['modality']=='audio':
+                            astimulus = load_audio_stimulus(
+                                filename=stimulus_source['source'],
+                                start=stimulus_source['start'],
+                                factor=stimulus_source['factor'],
+                            )
+                        if popVal['modality']=='fromfile':
+                            astimulus = load_stimulus(
+                                filename=stimulus_source['source'],
+                                start=stimulus_source['start'],
+                            )
+                        # protocol
+                        if len(spiketimes)==0:
+                            # first (or unique) stimulus
+                            spiketimes.extend( astimulus )
+                        else:
+                            # following stimuli
+                            for cellnum in range(len(spiketimes)):
+                                spiketimes[cellnum] = np.append(spiketimes[cellnum], astimulus[cellnum])
+                # print(spiketimes)
+                populations[popKey].set(spike_times=spiketimes) # assigned after creation
+                # print(populations[popKey].get('spike_times')) # assigned after creation
 
     projections = {}
     for projKey,projVal in params['Projections'].items():
@@ -210,8 +282,8 @@ def run_simulation(sim, params, populations, stimulus_frames):
     # sim.run(run_time, callbacks=[modpop])
 
     if len(stimulus_frames)>1:
-        # rate_generator = iter(frames)
-        interval = params['Populations']['stimulus']['source']['interval']
+        # print("Stimulus frame mean:",np.mean(stimulus_frames), "   max",np.max(stimulus_frames))
+        interval = params['Populations']['stimulus']['interval']
         rate_generator = iter(stimulus_frames)
         sim.run(params['run_time'], callbacks=[ SetRate(sim, populations['stimulus'], rate_generator, interval) ])
     else:
@@ -243,6 +315,7 @@ def record_data(params, populations):
     for recPop, recVal in params['Recorders'].items():
         for elKey,elVal in recVal.items():
             #populations[recPop].record( None )
+
             if elVal == 'all':
                 populations[recPop].record( elKey )
 
@@ -262,15 +335,25 @@ def record_data(params, populations):
                 populations[recPop][elVal['start']:elVal['end']].record( elKey )
 
 
-def save_connections(params, projections, folder, addon=''):
+def save_connections(params, populations, projections, folder, addon=''):
     print("\nSaving connections ...")
 
     for key,p in projections.items():
         if 'save_connections' in params['Projections'][key] and params['Projections'][key]['save_connections']:
             conns = p.get(["weight"], format="list", with_address=True)
             # print(conns)
+            print(key, addon)
             # format: cell id, cell index, x, y
-            np.save(folder+'/connections_'+key+addon+'.npy', conns)
+            np.save(folder+'/connections_'+key+'.npy', conns)
+
+    for key,p in populations.items():
+        # positions
+        with open(folder+'/'+key+'_positions.txt', 'w') as pfile:
+            # write
+            for cid in p.all_cells:
+                cidx = p.id_to_index(cid)
+                pfile.write(str(cid)+" " + str(cidx)+" " + str(p.positions[0][cidx])+" " + str(p.positions[1][cidx])+" " + str(p.positions[2][cidx])+"\n")
+            pfile.close()
 
 
 def save_data(populations, folder, stimulus_frames, addon=''):
@@ -279,18 +362,17 @@ def save_data(populations, folder, stimulus_frames, addon=''):
     timer.reset()
 
     for key,p in populations.items():
-        if key != 'ext':
-
-            # recordings
-            p.write_data(folder+'/'+key+addon+'.pkl')
-
-            # positions
-            with open(folder+'/'+key+addon+'_positions.txt', 'w') as pfile:
-                # write
-                for cid in p.all_cells:
-                    cidx = p.id_to_index(cid)
-                    pfile.write(str(cid)+" " + str(cidx)+" " + str(p.positions[0][cidx])+" " + str(p.positions[1][cidx])+" " + str(p.positions[2][cidx])+"\n")
-                pfile.close()
+        # recordings
+        p.write_data(folder+'/'+key+addon+'.pkl')
+        # spiketrains
+        spiketrains = []
+        # data = p.get_data().segments[0]
+        data = p.get_data('spikes')
+         # for spiketrain in data.spiketrains:
+        for spiketrain in data.segments[0].spiketrains:
+            spiketrain = spiketrain.magnitude
+            spiketrains.append(spiketrain)
+        np.save(folder+'/spiketrains_'+key+addon+'.npy', spiketrains)
 
     # if len(stimulus_frames):
     #     fig = plt.figure()
