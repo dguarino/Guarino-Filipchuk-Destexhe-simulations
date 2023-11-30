@@ -5,7 +5,7 @@
 # $ docker build -t neuro .
 #
 # default usage (using github repo master):
-# $ docker run --privileged --memory="32g" --oom-kill-disable -e DISPLAY=$DISPLAY -i -t neuro /bin/bash
+# $ docker run --privileged --memory="32g" --oom-kill-disable -e DISPLAY=$DISPLAY -v `pwd`:`pwd` -w `pwd` -i -t neuro /bin/bash
 # development usage (slow):
 # $ docker run --privileged --memory="32g" --oom-kill-disable -e DISPLAY=$DISPLAY -v `pwd`:`pwd`:delegated -w `pwd` -i -t neuro /bin/bash
 # this command line above contains three optimisation for the osx:

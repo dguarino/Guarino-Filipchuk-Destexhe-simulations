@@ -142,6 +142,9 @@
 
 
     'Recorders' : {
+        'drive' : {
+            'spikes' : 'all',
+        },
         'py' : {
             'spikes' : 'all',
             # 'v' : {

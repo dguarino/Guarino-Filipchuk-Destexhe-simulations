@@ -143,6 +143,7 @@ def analyse(params, folder, addon='', removeDataFile=False):
                 print("from file:",key+addon+'_'+trial['name']+str(itrial))
                 neo = pickle.load( open(folder+'/'+key+addon+'_'+trial['name']+str(itrial)+'.pkl', "rb") )
                 data = neo.segments[0]
+                # print(data.spiketrains)
 
                 # getting and slicing data
                 # continuous variables (Vm, Gsyn, W) are sliced just according to the dt
@@ -158,6 +159,7 @@ def analyse(params, folder, addon='', removeDataFile=False):
                 if 'spikes' in rec:
                     # spiketrains = data.spiketrains[ (data.spiketrains[:]>=timeslice_start) & (data.spiketrains[:]<=timeslice_end) ]
                     spiketrains = []
+                    spiketrains_raw = []
                     if 'subsampling' in params['Analysis'] and params['Analysis']['subsampling']:
                         choice_indices = np.random.choice(len(data.spiketrains), params['Analysis']['subsampling'], replace=False)
                         for spiketrain in [data.spiketrains[i] for i in choice_indices]:
@@ -165,6 +167,10 @@ def analyse(params, folder, addon='', removeDataFile=False):
                     else:
                         for spiketrain in data.spiketrains:
                             spiketrains.append(spiketrain[ (spiketrain>=timeslice_start) & (spiketrain<=timeslice_end) ])
+                            # save raw
+                            spiketrain = spiketrain.magnitude
+                            spiketrains_raw.append(spiketrain)
+                        np.save(folder+'/spiketrains_'+key+addon+'.npy', spiketrains_raw)
 
                 # Get cell indexes and ids
                 cell_coords = []

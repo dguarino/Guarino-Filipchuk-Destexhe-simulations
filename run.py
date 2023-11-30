@@ -147,7 +147,6 @@ if search:
 
 
 # run combinations
-np.random.seed(2**32-1) # impose seed to numpy
 info = []
 totc = len(combinations)
 for i,comb in enumerate(combinations):
@@ -178,6 +177,7 @@ for i,comb in enumerate(combinations):
 
     # either we simulate or we analyse
     if not opts.analysis_file:
+        print("RNG seed:",params['rng_seed'])
         Populations, Projections, Frames = h.build_network(sim, params)
         h.save_connections(params, Populations, Projections, opts.data_folder)
         h.record_data(params, Populations)
@@ -188,8 +188,6 @@ for i,comb in enumerate(combinations):
                 h.modify_populations(sim, state['modify'], Populations)
             for itrial in range(state['count']):
                 print("trial #",itrial)
-                if 'rng_seed' in params:
-                    sim.NativeRNG(seed=params['rng_seed'])
                 h.run_simulation(sim, params, Populations, Frames)
                 h.save_data(Populations, opts.data_folder, Frames, addon=str(comb)+'_'+state['name']+str(itrial))
         sim.end()
